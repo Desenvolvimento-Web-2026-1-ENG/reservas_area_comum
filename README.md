@@ -1,6 +1,10 @@
-# 🏢 CondoReservas
+<div align="center">
 
-Sistema web para gerenciamento de reservas de áreas comuns em condomínios residenciais.
+<img src="docs/assets/condoreservas-logo.png" alt="CondoReservas" width="500">
+
+### Sistema de gerenciamento e reservas para condomínios
+
+</div>
 
 ---
 
@@ -19,15 +23,6 @@ O **CondoReservas** permite que moradores reservem espaços compartilhados como 
 
 ---
 
-## Funcionalidades
-
-- **Listagem de espaços** com descrição, capacidade e regras de uso de cada ambiente
-- **Calendário de reservas** por espaço, com visualização de disponibilidade em tempo real
-- **Realização de reservas** com validação automática de conflitos de horário
-- **Aprovação e cancelamento** de reservas pelo zelador via painel administrativo
-
----
-
 ## Regras de Negócio
 
 - Nenhum morador pode reservar mais de um espaço no mesmo dia (regra de convivência)
@@ -43,35 +38,15 @@ O **CondoReservas** permite que moradores reservem espaços compartilhados como 
 Sugestões compatíveis com o escopo:
 
 - **Frontend:** React ou Vue.js
-- **Backend:** Node.js (Express) ou Python (FastAPI)
+- **Backend:** Node.js (Express) 
 - **Banco de dados:** PostgreSQL
 - **Autenticação:** JWT
 
 ---
 
-## Estrutura Esperada do Projeto
-
-```
-condoreservas/
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Espacos.jsx        # Listagem de áreas comuns
-│   │   │   ├── Calendario.jsx     # Calendário de reservas
-│   │   │   ├── MinhasReservas.jsx # Reservas do morador
-│   │   │   └── Admin.jsx          # Painel do zelador
-│   │   └── components/
-├── backend/
-│   ├── routes/
-│   │   ├── reservas.py
-│   │   ├── espacos.py
-│   │   └── usuarios.py
-│   └── models/
-└── README.md
-```
-
----
 
 ## Autor
 
 **Daniel** — Projeto de disciplina / portfólio
+
+---
