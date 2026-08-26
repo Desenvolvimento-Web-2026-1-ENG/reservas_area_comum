@@ -1,0 +1,421 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CondoReservas API",
+    "version": "1.0.0",
+    "description": "API para gerenciamento de reservas de áreas comuns em condomínios residenciais."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001"
+    }
+  ],
+  "tags": [
+    { "name": "Infraestrutura" },
+    { "name": "Autenticação" },
+    { "name": "Espaços" },
+    { "name": "Reservas" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "token opaco" }
+    },
+    "parameters": {
+      "EspacoId": { "in": "path", "name": "espacoId", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "ReservaId": { "in": "path", "name": "reservaId", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "DataReserva": { "in": "query", "name": "data", "required": false, "schema": { "type": "string", "format": "date", "example": "2026-09-10" } },
+      "DataInicioReserva": { "in": "query", "name": "dataInicio", "required": false, "schema": { "type": "string", "format": "date", "example": "2026-09-01" } },
+      "DataFimReserva": { "in": "query", "name": "dataFim", "required": false, "schema": { "type": "string", "format": "date", "example": "2026-09-30" } },
+      "StatusReserva": { "in": "query", "name": "status", "required": false, "schema": { "type": "string", "enum": ["PENDENTE", "APROVADA", "RECUSADA", "CANCELAMENTO_SOLICITADO", "CANCELADA"] } },
+      "Pagina": { "in": "query", "name": "pagina", "required": false, "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+      "Limite": { "in": "query", "name": "limite", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 } }
+    },
+    "schemas": {
+      "CadastroUsuario": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nome", "email", "senha", "papel"],
+        "properties": {
+          "nome": { "type": "string", "example": "Maria Souza" },
+          "email": { "type": "string", "format": "email", "example": "maria@condominio.com" },
+          "senha": { "type": "string", "format": "password", "minLength": 6, "writeOnly": true, "example": "segredo123" },
+          "papel": { "type": "string", "enum": ["MORADOR", "ZELADOR"], "example": "MORADOR" }
+        }
+      },
+      "Usuario": {
+        "type": "object",
+        "required": ["id", "nome", "email", "papel", "criadoEm"],
+        "example": { "id": "550e8400-e29b-41d4-a716-446655440000", "nome": "Maria Souza", "email": "maria@condominio.com", "papel": "MORADOR", "criadoEm": "2026-08-22T18:00:00.000Z" },
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "nome": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "papel": { "type": "string", "enum": ["MORADOR", "ZELADOR"] },
+          "criadoEm": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Credenciais": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["email", "senha"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "senha": { "type": "string", "format": "password" }
+        }
+      },
+      "Autenticacao": {
+        "type": "object",
+        "required": ["token", "usuario"],
+        "example": { "token": "token-opaco-gerado-no-login", "usuario": { "id": "550e8400-e29b-41d4-a716-446655440000", "nome": "Maria Souza", "email": "maria@condominio.com", "papel": "MORADOR", "criadoEm": "2026-08-22T18:00:00.000Z" } },
+        "properties": {
+          "token": { "type": "string" },
+          "usuario": { "$ref": "#/components/schemas/Usuario" }
+        }
+      },
+      "CadastroEspaco": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nome", "descricao", "capacidade", "regras"],
+        "properties": {
+          "nome": { "type": "string", "example": "Salão de festas" },
+          "descricao": { "type": "string", "example": "Salão com capacidade para eventos" },
+          "capacidade": { "type": "integer", "minimum": 1, "example": 50 },
+          "regras": { "type": "string", "example": "Uso permitido até às 22h" }
+        }
+      },
+      "AtualizacaoEspaco": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "nome": { "type": "string" },
+          "descricao": { "type": "string" },
+          "capacidade": { "type": "integer", "minimum": 1 },
+          "regras": { "type": "string" }
+        }
+      },
+      "Espaco": {
+        "type": "object",
+        "required": ["id", "nome", "descricao", "capacidade", "regras", "criadoEm"],
+        "example": { "id": "550e8400-e29b-41d4-a716-446655440000", "nome": "Salão de festas", "descricao": "Espaço para eventos", "capacidade": 50, "regras": "Uso permitido até às 22h", "criadoEm": "2026-08-22T18:00:00.000Z" },
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "nome": { "type": "string" },
+          "descricao": { "type": "string" },
+          "capacidade": { "type": "integer" },
+          "regras": { "type": "string" },
+          "criadoEm": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CriacaoReserva": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["data", "horaInicio", "horaFim"],
+        "properties": {
+          "data": { "type": "string", "format": "date", "example": "2026-09-10" },
+          "horaInicio": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$", "example": "14:00" },
+          "horaFim": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$", "example": "18:00" }
+        }
+      },
+      "Reserva": {
+        "type": "object",
+        "required": ["id", "usuarioId", "espacoId", "data", "horaInicio", "horaFim", "status", "criadaEm"],
+        "example": { "id": "650e8400-e29b-41d4-a716-446655440000", "usuarioId": "550e8400-e29b-41d4-a716-446655440000", "espacoId": "750e8400-e29b-41d4-a716-446655440000", "data": "2026-09-10", "horaInicio": "14:00", "horaFim": "18:00", "status": "PENDENTE", "criadaEm": "2026-08-22T18:00:00.000Z" },
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "usuarioId": { "type": "string", "format": "uuid" },
+          "espacoId": { "type": "string", "format": "uuid" },
+          "data": { "type": "string" },
+          "horaInicio": { "type": "string" },
+          "horaFim": { "type": "string" },
+          "status": { "type": "string", "enum": ["PENDENTE", "APROVADA", "RECUSADA", "CANCELAMENTO_SOLICITADO", "CANCELADA"] },
+          "criadaEm": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PaginaReservas": {
+        "type": "object",
+        "required": ["itens", "pagina", "limite", "total", "totalPaginas"],
+        "properties": {
+          "itens": { "type": "array", "items": { "$ref": "#/components/schemas/Reserva" } },
+          "pagina": { "type": "integer", "minimum": 1 },
+          "limite": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "total": { "type": "integer", "minimum": 0 },
+          "totalPaginas": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "Erro": {
+        "type": "object",
+        "required": ["erro", "mensagem"],
+        "example": { "erro": "SessaoNaoAutorizada", "mensagem": "Token ausente ou inválido" },
+        "properties": {
+          "erro": { "type": "string", "example": "DadosInvalidos" },
+          "mensagem": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "RequisicaoInvalida": { "description": "Dados de entrada inválidos.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+      "NaoAutenticado": { "description": "Token ausente ou inválido.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+      "NaoAutorizado": { "description": "Usuário sem permissão para a operação.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+      "NaoEncontrado": { "description": "Recurso não encontrado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+      "Conflito": { "description": "A operação viola uma regra de negócio ou o estado atual do recurso.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+      "ErroInterno": { "description": "Erro inesperado do servidor.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" }, "example": { "erro": "ErroInterno", "mensagem": "Erro interno do servidor" } } } }
+    }
+  },
+  "paths": {
+    "/api/status": {
+      "get": { "tags": ["Infraestrutura"], "summary": "Informa se a API está online", "responses": { "200": { "description": "API online" } } }
+    },
+    "/api/health": {
+      "get": { "tags": ["Infraestrutura"], "summary": "Verifica a saúde da API", "responses": { "200": { "description": "API saudável" } } }
+    },
+    "/usuarios": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Cadastra um usuário (morador ou zelador)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CadastroUsuario" } } } },
+        "responses": {
+          "201": { "description": "Usuário cadastrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Usuario" } } } },
+          "400": { "$ref": "#/components/responses/RequisicaoInvalida" },
+          "409": { "$ref": "#/components/responses/Conflito" }
+        }
+      },
+      "get": {
+        "tags": ["Autenticação"],
+        "summary": "Lista todos os usuários cadastrados (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Lista de usuários", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Usuario" } } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" }
+        }
+      }
+    },
+    "/autenticacao/entrar": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Autentica um usuário e retorna um token",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Credenciais" } } } },
+        "responses": {
+          "200": { "description": "Autenticação concluída", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Autenticacao" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" }
+        }
+      }
+    },
+    "/usuarios/me": {
+      "get": {
+        "tags": ["Autenticação"],
+        "summary": "Consulta o usuário autenticado",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Dados do usuário autenticado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Usuario" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" }
+        }
+      }
+    },
+    "/espacos": {
+      "post": {
+        "tags": ["Espaços"],
+        "summary": "Cadastra um espaço comum (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CadastroEspaco" } } } },
+        "responses": {
+          "201": { "description": "Espaço cadastrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Espaco" } } } },
+          "400": { "$ref": "#/components/responses/RequisicaoInvalida" },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" }
+        }
+      },
+      "get": {
+        "tags": ["Espaços"],
+        "summary": "Lista todos os espaços comuns",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Lista de espaços", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Espaco" } } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" }
+        }
+      }
+    },
+    "/espacos/{espacoId}": {
+      "get": {
+        "tags": ["Espaços"],
+        "summary": "Busca um espaço pelo id",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/EspacoId" }],
+        "responses": {
+          "200": { "description": "Espaço encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Espaco" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" }
+        }
+      },
+      "patch": {
+        "tags": ["Espaços"],
+        "summary": "Atualiza um espaço (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/EspacoId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AtualizacaoEspaco" } } } },
+        "responses": {
+          "200": { "description": "Espaço atualizado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Espaco" } } } },
+          "400": { "$ref": "#/components/responses/RequisicaoInvalida" },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" }
+        }
+      },
+      "delete": {
+        "tags": ["Espaços"],
+        "summary": "Remove um espaço (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/EspacoId" }],
+        "responses": {
+          "204": { "description": "Espaço removido" },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" }
+        }
+      }
+    },
+    "/espacos/{espacoId}/reservas": {
+      "post": {
+        "tags": ["Reservas"],
+        "summary": "Cria uma reserva para o espaço (somente morador)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/EspacoId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CriacaoReserva" } } } },
+        "responses": {
+          "201": { "description": "Reserva criada (nasce como PENDENTE)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reserva" } } } },
+          "400": { "$ref": "#/components/responses/RequisicaoInvalida" },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflito" }
+        }
+      },
+      "get": {
+        "tags": ["Reservas"],
+        "summary": "Lista as reservas de um espaço (calendário de disponibilidade)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/EspacoId" }, { "$ref": "#/components/parameters/DataReserva" }, { "$ref": "#/components/parameters/DataInicioReserva" }, { "$ref": "#/components/parameters/DataFimReserva" }, { "$ref": "#/components/parameters/StatusReserva" }, { "$ref": "#/components/parameters/Pagina" }, { "$ref": "#/components/parameters/Limite" }],
+        "responses": {
+          "200": { "description": "Lista paginada de reservas do espaço", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginaReservas" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" }
+        }
+      }
+    },
+    "/espacos/{espacoId}/disponibilidade": {
+      "get": {
+        "tags": ["Reservas"],
+        "summary": "Consulta a disponibilidade de um espaço em uma data",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/EspacoId" }, { "in": "query", "name": "data", "required": true, "schema": { "type": "string", "example": "2026-09-10" } }],
+        "responses": {
+          "200": { "description": "Reservas ativas na data", "content": { "application/json": { "schema": { "type": "object", "required": ["espacoId", "data", "reservas"], "properties": { "espacoId": { "type": "string", "format": "uuid" }, "data": { "type": "string" }, "reservas": { "type": "array", "items": { "$ref": "#/components/schemas/Reserva" } } } } } } },
+          "400": { "$ref": "#/components/responses/RequisicaoInvalida" },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" }
+        }
+      }
+    },
+    "/reservas/minhas": {
+      "get": {
+        "tags": ["Reservas"],
+        "summary": "Lista as reservas do usuário autenticado",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/DataReserva" }, { "$ref": "#/components/parameters/DataInicioReserva" }, { "$ref": "#/components/parameters/DataFimReserva" }, { "$ref": "#/components/parameters/StatusReserva" }, { "$ref": "#/components/parameters/Pagina" }, { "$ref": "#/components/parameters/Limite" }],
+        "responses": {
+          "200": { "description": "Lista paginada de reservas do usuário", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginaReservas" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" }
+        }
+      }
+    },
+    "/reservas/pendentes": {
+      "get": {
+        "tags": ["Reservas"],
+        "summary": "Lista todas as reservas pendentes (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Lista de reservas pendentes", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Reserva" } } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" }
+        }
+      }
+    },
+    "/reservas/{reservaId}/aprovacao": {
+      "patch": {
+        "tags": ["Reservas"],
+        "summary": "Aprova uma reserva pendente (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReservaId" }],
+        "responses": {
+          "200": { "description": "Reserva aprovada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reserva" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflito" }
+        }
+      }
+    },
+    "/reservas/{reservaId}/recusa": {
+      "patch": {
+        "tags": ["Reservas"],
+        "summary": "Recusa uma reserva pendente (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReservaId" }],
+        "responses": {
+          "200": { "description": "Reserva recusada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reserva" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflito" }
+        }
+      }
+    },
+    "/reservas/{reservaId}/cancelamento": {
+      "post": {
+        "tags": ["Reservas"],
+        "summary": "Solicita o cancelamento da própria reserva (somente morador dono da reserva)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReservaId" }],
+        "responses": {
+          "200": { "description": "Cancelamento solicitado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reserva" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflito" }
+        }
+      }
+    },
+    "/reservas/{reservaId}/cancelamento/aprovacao": {
+      "patch": {
+        "tags": ["Reservas"],
+        "summary": "Aprova o cancelamento solicitado (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReservaId" }],
+        "responses": {
+          "200": { "description": "Cancelamento aprovado (reserva CANCELADA)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reserva" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflito" }
+        }
+      }
+    },
+    "/reservas/{reservaId}/cancelamento/recusa": {
+      "patch": {
+        "tags": ["Reservas"],
+        "summary": "Recusa o cancelamento solicitado, revertendo ao status anterior (somente zelador)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/ReservaId" }],
+        "responses": {
+          "200": { "description": "Cancelamento recusado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Reserva" } } } },
+          "401": { "$ref": "#/components/responses/NaoAutenticado" },
+          "403": { "$ref": "#/components/responses/NaoAutorizado" },
+          "404": { "$ref": "#/components/responses/NaoEncontrado" },
+          "409": { "$ref": "#/components/responses/Conflito" }
+        }
+      }
+    }
+  }
+}
