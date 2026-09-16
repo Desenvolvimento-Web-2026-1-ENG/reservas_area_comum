@@ -8,6 +8,7 @@ interface Controllers {
   cadastrarUsuario: Controller;
   autenticar: Controller;
   buscarMeuUsuario: Controller;
+  atualizarMeuUsuario: Controller;
   listarUsuarios: Controller;
   cadastrarEspaco: Controller;
   atualizarEspaco: Controller;
@@ -18,6 +19,7 @@ interface Controllers {
   listarReservasDoEspaco: Controller;
   consultarDisponibilidade: Controller;
   listarReservasPendentes: Controller;
+  listarCancelamentosPendentes: Controller;
   listarMinhasReservas: Controller;
   aprovarReserva: Controller;
   recusarReserva: Controller;
@@ -37,6 +39,7 @@ export function criarRotas(c: Controllers, tokens: ServicoToken) {
   rotas.use(criarMiddlewareAutenticacao(tokens));
 
   rotas.get("/usuarios/me", adaptarController(c.buscarMeuUsuario));
+  rotas.patch("/usuarios/me", adaptarController(c.atualizarMeuUsuario));
   rotas.get("/usuarios", adaptarController(c.listarUsuarios)); // zelador
 
   // espaços
@@ -52,6 +55,7 @@ export function criarRotas(c: Controllers, tokens: ServicoToken) {
   rotas.get("/espacos/:espacoId/disponibilidade", adaptarController(c.consultarDisponibilidade));
   rotas.get("/reservas/minhas", adaptarController(c.listarMinhasReservas)); // morador
   rotas.get("/reservas/pendentes", adaptarController(c.listarReservasPendentes)); // zelador
+  rotas.get("/reservas/cancelamentos-pendentes", adaptarController(c.listarCancelamentosPendentes)); // zelador
   rotas.patch("/reservas/:reservaId/aprovacao", adaptarController(c.aprovarReserva)); // zelador
   rotas.patch("/reservas/:reservaId/recusa", adaptarController(c.recusarReserva)); // zelador
   rotas.post("/reservas/:reservaId/cancelamento", adaptarController(c.solicitarCancelamento)); // morador

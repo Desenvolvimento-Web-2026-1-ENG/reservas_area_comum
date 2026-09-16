@@ -1,9 +1,13 @@
 import express from "express";
+import cors from "cors";
 import type { Express } from "express";
 
 import { RepositorioUsuarioEmMemoria } from "../infrastructure/database/RepositorioUsuarioEmMemoria.js";
 import { RepositorioEspacoEmMemoria } from "../infrastructure/database/RepositorioEspacoEmMemoria.js";
 import { RepositorioReservaEmMemoria } from "../infrastructure/database/RepositorioReservaEmMemoria.js";
+import { PrismaRepositorioUsuario } from "../infrastructure/database/PrismaRepositorioUsuario.js";
+import { PrismaRepositorioEspaco } from "../infrastructure/database/PrismaRepositorioEspaco.js";
+import { PrismaRepositorioReserva } from "../infrastructure/database/PrismaRepositorioReserva.js";
 
 import { CriptografadorSenhaScrypt } from "../infrastructure/services/CriptografadorSenhaScrypt.js";
 import { GeradorUuid } from "../infrastructure/services/GeradorUuid.js";
@@ -17,8 +21,8 @@ import { AgendaReservas } from "../use-cases/AgendaReservas.js";
 
 import { CadastrarUsuarioController } from "../interfaces/controllers/CadastrarUsuarioController.js";
 import { AutenticacaoController } from "../interfaces/controllers/AutenticacaoController.js";
-import { BuscarMeuUsuarioController } from "../interfaces/controllers/UsuarioControllers.js";
-import { ListarUsuariosController, ListarReservasPendentesController } from "../interfaces/controllers/ListagensZeladorControllers.js";
+import { AtualizarMeuUsuarioController, BuscarMeuUsuarioController } from "../interfaces/controllers/UsuarioControllers.js";
+import { ListarUsuariosController, ListarReservasPendentesController, ListarCancelamentosPendentesController } from "../interfaces/controllers/ListagensZeladorControllers.js";
 import {
   CadastrarEspacoController,
   AtualizarEspacoController,
@@ -43,9 +47,11 @@ import { tratarErros } from "../infrastructure/http/TratadorErros.js";
 import { configurarDocumentacao } from "../infrastructure/http/OpenApi.js";
 
 function montarNucleo() {
-  const usuarios = new RepositorioUsuarioEmMemoria();
-  const espacos = new RepositorioEspacoEmMemoria();
-  const reservas = new RepositorioReservaEmMemoria();
+  // P2: persistência real com SQLite + Prisma ORM 6.
+  // Os repositórios em memória originais permanecem no projeto para preservar a implementação da P1.
+  const usuarios = new PrismaRepositorioUsuario();
+  const espacos = new PrismaRepositorioEspaco();
+  const reservas = new PrismaRepositorioReserva();
 
   const senhas = new CriptografadorSenhaScrypt();
   const ids = new GeradorUuid();
@@ -69,6 +75,7 @@ export function configurarApi(): Express {
       cadastrarUsuario: new CadastrarUsuarioController(gestaoUsuarios),
       autenticar: new AutenticacaoController(gestaoUsuarios),
       buscarMeuUsuario: new BuscarMeuUsuarioController(gestaoUsuarios),
+      atualizarMeuUsuario: new AtualizarMeuUsuarioController(gestaoUsuarios),
       listarUsuarios: new ListarUsuariosController(gestaoUsuarios),
       cadastrarEspaco: new CadastrarEspacoController(catalogoEspacos),
       atualizarEspaco: new AtualizarEspacoController(catalogoEspacos),
@@ -79,6 +86,7 @@ export function configurarApi(): Express {
       listarReservasDoEspaco: new ListarReservasDoEspacoController(agendaReservas),
       consultarDisponibilidade: new ConsultarDisponibilidadeController(agendaReservas),
       listarReservasPendentes: new ListarReservasPendentesController(agendaReservas),
+      listarCancelamentosPendentes: new ListarCancelamentosPendentesController(agendaReservas),
       listarMinhasReservas: new ListarMinhasReservasController(agendaReservas),
       aprovarReserva: new AprovarReservaController(agendaReservas),
       recusarReserva: new RecusarReservaController(agendaReservas),
@@ -90,6 +98,7 @@ export function configurarApi(): Express {
   );
 
   const app = express();
+  app.use(cors({ origin: true }));
   app.use(express.json());
 
   configurarDocumentacao(app);

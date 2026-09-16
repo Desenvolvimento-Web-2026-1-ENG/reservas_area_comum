@@ -3,7 +3,7 @@ import type { CriptografadorSenha } from "./ports/CriptografadorSenha.js";
 import type { GeradorIdentificador } from "./ports/GeradorIdentificador.js";
 import type { FonteDeTempo } from "./ports/FonteDeTempo.js";
 import type { ServicoToken } from "./ports/ServicoToken.js";
-import type { CadastrarUsuarioDto, UsuarioDto } from "./dtos/UsuarioDto.js";
+import type { AtualizarMeuUsuarioDto, CadastrarUsuarioDto, UsuarioDto } from "./dtos/UsuarioDto.js";
 import type { AutenticarDto, AutenticacaoDto } from "./dtos/AutenticacaoDto.js";
 import type { Usuario } from "../entities/Usuario.js";
 import { exigirTexto } from "../entities/validacoes.js";
@@ -69,6 +69,31 @@ export class GestorUsuarios {
     const usuario = await this.dependencias.usuarios.buscarPorId(id);
     if (!usuario) throw new RecursoAusente("Usuário");
     return paraDto(usuario);
+  }
+
+  async atualizarMeuUsuario(id: string, dto: AtualizarMeuUsuarioDto): Promise<UsuarioDto> {
+    const usuario = await this.dependencias.usuarios.buscarPorId(id);
+    if (!usuario) throw new RecursoAusente("Usuário");
+
+    const nome = exigirTexto(dto.nome, "nome");
+    const email = exigirTexto(dto.email, "email").toLowerCase();
+    const existente = await this.dependencias.usuarios.buscarPorEmail(email);
+    if (existente && existente.id !== id) {
+      throw new OperacaoConflitante("Já existe um usuário cadastrado com este email");
+    }
+    if (dto.senha !== undefined && dto.senha.length < 6) {
+      throw new DadosInvalidos("A senha deve ter ao menos 6 caracteres");
+    }
+
+    const atualizado: Usuario = {
+      ...usuario,
+      nome,
+      email,
+      senhaCriptografada: dto.senha ? await this.dependencias.senhas.criptografar(dto.senha) : usuario.senhaCriptografada
+    };
+
+    await this.dependencias.usuarios.salvar(atualizado);
+    return paraDto(atualizado);
   }
 
   async listarTodos(zeladorId: string): Promise<UsuarioDto[]> {

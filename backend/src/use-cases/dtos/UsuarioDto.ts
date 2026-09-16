@@ -7,6 +7,12 @@ export interface CadastrarUsuarioDto {
   papel: PapelUsuario;
 }
 
+export interface AtualizarMeuUsuarioDto {
+  nome: string;
+  email: string;
+  senha?: string;
+}
+
 export interface UsuarioDto {
   id: string;
   nome: string;
