@@ -1,156 +1,84 @@
-# CondoReservas — Backend
+# Backend — CondoReservas
 
-Sistema web para gerenciamento de reservas de áreas comuns em condomínios residenciais.
+Backend da aplicação CondoReservas. A P2 mantém a arquitetura da P1 e troca a implementação principal dos repositórios em memória por **SQLite + Prisma ORM 6**.
 
-## Como rodar
+## Executar
 
 ```bash
-cd backend
 npm install
+npx prisma generate
+npx prisma migrate dev
+npm run prisma:seed
 npm run dev
 ```
 
-O servidor sobe em `http://localhost:3001`.
+Servidor: `http://localhost:3001`
 
-- Documentação Swagger (interativa, testa a API pelo navegador): `http://localhost:3001/api/docs`
-- Especificação OpenAPI crua: `http://localhost:3001/openapi.json`
+Swagger: `http://localhost:3001/api/docs`
 
-Não é necessário configurar banco de dados nesta etapa: os dados ficam em memória (somem ao reiniciar o servidor).
+## Banco
 
-## Endpoints e autenticação
+O arquivo SQLite é criado em:
 
-As requisições com corpo usam `Content-Type: application/json`. As rotas protegidas também exigem
-`Authorization: Bearer <token>`. O token é obtido em `POST /autenticacao/entrar` e pode ser
-informado pelo botão **Authorize** do Swagger.
-
-| Método | URL | Acesso | Corpo |
-| --- | --- | --- | --- |
-| `POST` | `/usuarios` | Público | `nome`, `email`, `senha`, `papel` (`MORADOR` ou `ZELADOR`) |
-| `GET` | `/usuarios` | Zelador | Nenhum |
-| `POST` | `/autenticacao/entrar` | Público | `email`, `senha` |
-| `GET` | `/usuarios/me` | Autenticado | Nenhum |
-| `POST` | `/espacos` | Zelador | `nome`, `descricao`, `capacidade`, `regras` |
-| `GET` | `/espacos` | Autenticado | Nenhum |
-| `GET` | `/espacos/{espacoId}` | Autenticado | Nenhum |
-| `PATCH` | `/espacos/{espacoId}` | Zelador | Ao menos um entre `nome`, `descricao`, `capacidade`, `regras` |
-| `DELETE` | `/espacos/{espacoId}` | Zelador | Nenhum |
-| `POST` | `/espacos/{espacoId}/reservas` | Morador | `data`, `horaInicio`, `horaFim` |
-| `GET` | `/espacos/{espacoId}/reservas` | Autenticado | Query opcional: `data`, `dataInicio`, `dataFim`, `status`, `pagina`, `limite` |
-| `GET` | `/espacos/{espacoId}/disponibilidade` | Autenticado | Query obrigatória: `data` |
-| `GET` | `/reservas/minhas` | Autenticado | Query opcional: `data`, `dataInicio`, `dataFim`, `status`, `pagina`, `limite` |
-| `GET` | `/reservas/pendentes` | Zelador | Nenhum |
-| `PATCH` | `/reservas/{reservaId}/aprovacao` | Zelador | Nenhum |
-| `PATCH` | `/reservas/{reservaId}/recusa` | Zelador | Nenhum |
-| `POST` | `/reservas/{reservaId}/cancelamento` | Morador | Nenhum |
-| `PATCH` | `/reservas/{reservaId}/cancelamento/aprovacao` | Zelador | Nenhum |
-| `PATCH` | `/reservas/{reservaId}/cancelamento/recusa` | Zelador | Nenhum |
-
-Exemplo de criação de espaço:
-
-```json
-{
-  "nome": "Salão de festas",
-  "descricao": "Espaço para eventos",
-  "capacidade": 50,
-  "regras": "Uso permitido até às 22h"
-}
+```text
+backend/prisma/dev.db
 ```
 
-As listagens de reservas retornam `{ "itens": [], "pagina": 1, "limite": 20, "total": 0, "totalPaginas": 0 }`.
-Os filtros `data`, `dataInicio` e `dataFim` usam `AAAA-MM-DD`; `status` aceita os status da reserva;
-`pagina` começa em 1 e `limite` aceita valores de 1 a 100. A disponibilidade retorna somente reservas
-`PENDENTE` ou `APROVADA` para a data informada.
+A variável está em `.env`:
 
-Exemplo de resposta de sucesso (`201 Created`):
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "nome": "Salão de festas",
-  "descricao": "Espaço para eventos",
-  "capacidade": 50,
-  "regras": "Uso permitido até às 22h",
-  "criadoEm": "2026-08-22T18:00:00.000Z"
-}
+```env
+DATABASE_URL="file:./dev.db"
 ```
 
-Exemplos de erros esperados:
+Como o `schema.prisma` está em `backend/prisma`, o caminho relativo aponta para `backend/prisma/dev.db`.
 
-```json
-{
-  "erro": "SessaoNaoAutorizada",
-  "mensagem": "Token ausente ou inválido"
-}
+## Prisma 6
+
+Este projeto usa:
+
+- `prisma` 6.x
+- `@prisma/client` 6.x
+- SQLite
+
+Principais comandos:
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+npm run prisma:seed
+npm run prisma:studio
 ```
 
-Esse retorno usa `401 Unauthorized`. Um usuário autenticado, mas sem o papel necessário,
-recebe `403 Forbidden`; dados inválidos geram `400 Bad Request`; recurso inexistente gera
-`404 Not Found`; conflitos de regras de negócio geram `409 Conflict`; e falhas inesperadas
-geram `500 Internal Server Error`.
+## Repositórios
 
-## Arquitetura
+Os contratos existentes continuam em `src/repositories`.
 
-O projeto segue Clean Architecture, no mesmo espírito do projeto de referência (Marmita-Solidária):
+Implementações da P2:
 
-```
-src/
-  entities/            # Usuario, Espaco, Reserva — modelos de domínio e validações puras
-  repositories/         # Interfaces de persistência (contratos)
-  use-cases/             # Casos de uso e regras de negócio
-    ports/               # Abstrações de infraestrutura (senha, id, tempo, token)
-    errors/              # Erros de domínio, mapeados para status HTTP
-    dtos/                # Formatos de entrada/saída dos casos de uso
-  infrastructure/
-    database/            # Implementações em memória dos repositórios
-    services/             # Implementações concretas dos ports
-    http/                 # Rotas Express, adaptador de controller, middlewares, Swagger
-  interfaces/controllers/ # Controllers desacoplados do Express (implementam Controller)
-  factories/             # configurarApi.ts monta o núcleo e injeta as dependências
-  server.ts              # ponto de entrada
+- `src/infrastructure/database/PrismaRepositorioUsuario.ts`
+- `src/infrastructure/database/PrismaRepositorioEspaco.ts`
+- `src/infrastructure/database/PrismaRepositorioReserva.ts`
+
+As implementações `*EmMemoria.ts` da P1 foram preservadas, mas não são mais usadas pela factory principal.
+
+## Autenticação
+
+As rotas protegidas usam:
+
+```http
+Authorization: Bearer <token>
 ```
 
-A regra principal: nada na camada de `use-cases` ou `entities` conhece o Express. Toda a
-tradução HTTP fica isolada em `infrastructure/http` e `interfaces/controllers`.
+O token continua sendo gerado pelo serviço de sessão em memória da P1. O requisito de persistência da P2 é aplicado aos dados de usuários, espaços e reservas; a sessão não precisa ser armazenada no SQLite.
 
-## Autenticação (versão mínima)
+## Endpoints
 
-Implementação propositalmente simples, mas já isolada atrás de uma interface (`ServicoToken`):
-login retorna um token opaco guardado em memória, e um middleware Express (`MiddlewareAutenticacao`)
-resolve esse token para o id do usuário autenticado antes de chegar nos controllers.
+Consulte `openapi.json` ou o Swagger para a documentação completa.
 
-Quando quiser evoluir (JWT com expiração, refresh token, hash de senha mais robusto, etc.),
-basta trocar as classes em `infrastructure/services/` — o resto do código não muda.
+Além das rotas originais, a P2 disponibiliza:
 
-## Perfis e regras de negócio
+```text
+GET /reservas/cancelamentos-pendentes
+```
 
-- **Morador**: lista espaços, consulta calendário de disponibilidade, cria reservas, solicita
-  cancelamento das próprias reservas.
-- **Zelador**: tudo do morador, além de gerenciar espaços (criar/editar/remover) e
-  aprovar/recusar reservas e solicitações de cancelamento.
-
-Regras implementadas em `use-cases/AgendaReservas.ts`:
-
-1. Reserva exige no mínimo 3h de antecedência.
-2. Um morador não pode ter mais de uma reserva ativa (pendente ou aprovada) no mesmo dia.
-3. Duas reservas ativas não podem se sobrepor no mesmo espaço.
-4. Toda reserva nasce com status `PENDENTE`.
-5. Cancelamento solicitado pelo morador entra como `CANCELAMENTO_SOLICITADO` e só vira
-   `CANCELADA` com aprovação do zelador; se o zelador recusar, volta ao status anterior.
-
-## Testando pelo Swagger
-
-1. `POST /usuarios` — cadastre um usuário com `papel: "ZELADOR"` e outro com `"MORADOR"`.
-2. `POST /autenticacao/entrar` — copie o `token` retornado.
-3. No Swagger, clique em "Authorize" e cole o token (sem precisar do prefixo `Bearer`,
-   o Swagger adiciona automaticamente).
-4. Como zelador: `POST /espacos` para criar um espaço.
-5. Como morador: `POST /espacos/{espacoId}/reservas` para reservar (use uma data/hora com
-   pelo menos 3h de antecedência).
-6. Como zelador: `PATCH /reservas/{reservaId}/aprovacao` para aprovar.
-
-## Próximos passos sugeridos
-
-- Trocar os repositórios em memória por Prisma + SQLite (só a pasta `infrastructure/database`
-  muda; entidades e regras de negócio continuam iguais).
-- Evoluir a autenticação para JWT com expiração.
-- Construir o front-end React consumindo esta API.
+para que o frontend apresente a seção de cancelamentos solicitados pelo morador ao zelador.

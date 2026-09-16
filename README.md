@@ -1,104 +1,145 @@
 <div align="center">
+<img src="docs/assets/condoreservas-logo.png" alt="CondoReservas" width="420">
 
-<img src="docs/assets/condoreservas-logo.png" alt="CondoReservas" width="500">
+# CondoReservas
 
-### Sistema de gerenciamento e reservas para areas comuns de condominios
+### Sistema de gerenciamento e reservas para áreas comuns de condomínios
 
 </div>
 
 ---
 
-## Overview
+## P2 — SQLite + Prisma ORM 6 + React/Vite/Tailwind
 
-O **CondoReservas** e uma aplicacao para organizar o uso de areas comuns em condominios residenciais. A proposta e permitir que moradores consultem espacos, verifiquem horarios e solicitem reservas, enquanto o zelador acompanha e administra as decisoes do condominio.
+A implementação original da P1 foi preservada: entidades, casos de uso, controllers, autenticação por token, validações, Swagger e contratos dos repositórios continuam no projeto.
 
-Neste momento, o projeto possui o **backend funcional**, com as regras de negocio, autenticacao, controle de acesso e endpoints da API implementados. A proxima etapa e introduzir o frontend para transformar esses fluxos em uma experiencia completa de uso no navegador.
+Nesta etapa foram adicionados:
 
-## Estado atual
+- **SQLite** como banco de dados local;
+- **Prisma ORM 6** para persistência;
+- implementações `PrismaRepositorioUsuario`, `PrismaRepositorioEspaco` e `PrismaRepositorioReserva`;
+- migração Prisma e seed de demonstração;
+- **React + Vite** no frontend;
+- **Tailwind CSS** para a interface;
+- integração completa do frontend com a API;
+- telas de login, cadastro, espaços, detalhe do espaço, minhas reservas, aprovações, usuários e perfil;
+- CORS para desenvolvimento frontend/backend em portas diferentes.
 
-### Backend disponivel
+### Estrutura
 
-- Cadastro e autenticacao de usuarios.
-- Perfis de **MORADOR** e **ZELADOR**.
-- Cadastro, consulta, edicao e remocao de espacos pelo zelador.
-- Consulta de disponibilidade e calendario de reservas.
-- Criacao de reservas por moradores.
-- Aprovacao e recusa de reservas pelo zelador.
-- Solicitacao e tratamento de cancelamentos.
-- Validacao de conflitos e regras de convivencia.
-- Persistencia temporaria em memoria durante a execucao do servidor.
+```text
+reservas_area_comum/
+├── backend/
+│   ├── prisma/
+│   │   ├── migrations/
+│   │   ├── schema.prisma
+│   │   └── seed.ts
+│   ├── src/
+│   │   ├── entities/
+│   │   ├── use-cases/
+│   │   ├── repositories/
+│   │   ├── interfaces/
+│   │   ├── infrastructure/
+│   │   │   └── database/
+│   │   │       ├── prismaClient.ts
+│   │   │       ├── PrismaRepositorioUsuario.ts
+│   │   │       ├── PrismaRepositorioEspaco.ts
+│   │   │       ├── PrismaRepositorioReserva.ts
+│   │   │       └── ...implementações em memória da P1
+│   │   └── factories/
+│   └── .env
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   └── services/
+│   ├── tailwind.config.js
+│   └── vite.config.js
+└── docs/
+    ├── assets/
+    └── wireframe/
+```
 
-### Proxima etapa
+## Como executar
 
-Introduzir o frontend e conecta-lo a API existente, cobrindo os fluxos de login, cadastro, consulta de espacos, criacao de reservas, acompanhamento de pedidos e operacao do zelador. O layout inicial dessas telas esta documentado em [docs/wireframe/wireframe.md](docs/wireframe/wireframe.md).
-
-## Perfis de usuario
-
-| Perfil | O que pode fazer |
-| --- | --- |
-| **Morador** | Consultar espacos e disponibilidade, criar reservas e solicitar cancelamento das proprias reservas |
-| **Zelador** | Gerenciar espacos, consultar usuarios, aprovar ou recusar reservas e tratar solicitacoes de cancelamento |
-
-## Regras de negocio
-
-- A reserva exige no minimo 3 horas de antecedencia.
-- Um morador nao pode ter mais de uma reserva ativa no mesmo dia.
-- Reservas ativas nao podem se sobrepor no mesmo espaco.
-- Toda nova reserva inicia com status `PENDENTE`.
-- O cancelamento solicitado pelo morador depende da decisao do zelador.
-
-## Como executar o backend
+### 1. Backend
 
 ```bash
 cd backend
 npm install
+npx prisma generate
+npx prisma migrate dev
+npm run prisma:seed
 npm run dev
 ```
 
-Com o servidor em execucao, a API fica disponivel em `http://localhost:3001`.
+API: `http://localhost:3001`
 
-## Documentacao da API
+Swagger: `http://localhost:3001/api/docs`
 
-A documentacao detalhada da API esta no README dentro da pasta `backend`:
+Banco SQLite: `backend/prisma/dev.db`
 
-**[Abrir README do backend](backend/README.md)**
+### 2. Frontend
 
-Esse documento apresenta:
+Em outro terminal:
 
-- Como executar o servidor.
-- Endpoints, parametros, corpos de requisicao e respostas.
-- Regras de autenticacao com token Bearer.
-- Codigos de erro esperados.
-- Organizacao interna do backend.
-- Passo a passo para testar a API pelo Swagger.
-
-Com o backend rodando, tambem e possivel acessar:
-
-- **Swagger:** `http://localhost:3001/api/docs`
-- **OpenAPI:** `http://localhost:3001/openapi.json`
-
-## Estrutura atual
-
-```
-reservas_area_comum/
-├── backend/
-│   ├── src/
-│   │   ├── entities/          # Entidades e validacoes do dominio
-│   │   ├── use-cases/         # Regras e operacoes da aplicacao
-│   │   ├── repositories/      # Contratos dos repositorios
-│   │   ├── interfaces/        # Controllers
-│   │   ├── infrastructure/    # HTTP, memoria e servicos
-│   │   └── factories/         # Montagem da aplicacao
-│   ├── openapi.json           # Especificacao da API
-│   └── README.md              # Documentacao detalhada do backend
-├── docs/
-│   ├── assets/                # Imagens das telas
-│   └── wireframe/             # Documentacao do layout
-└── README.md                 # Visao geral do projeto
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-## Links rapidos
+O Vite exibirá o endereço local do frontend, normalmente `http://localhost:5173`.
 
-- [Documentacao do backend](backend/README.md)
-- [Documentacao dos wireframes](docs/wireframe/wireframe.md)
-- [Especificacao OpenAPI](backend/openapi.json)
+Se a API estiver em outro endereço, crie `frontend/.env` a partir de `.env.example`:
+
+```env
+VITE_API_URL=http://localhost:3001
+```
+
+## Usuários de demonstração
+
+O seed cria:
+
+| Perfil | E-mail | Senha |
+| --- | --- | --- |
+| Morador | `morador@condominio.com` | `senha123` |
+| Zelador | `zelador@condominio.com` | `senha123` |
+
+## Observações sobre Prisma 6
+
+O projeto usa `prisma` e `@prisma/client` na série **6.x**. Não foram utilizados recursos específicos do Prisma 7.
+
+Os repositórios em memória da P1 foram mantidos para não apagar o trabalho anterior, mas a factory principal agora injeta as implementações Prisma, fazendo com que os dados sobrevivam ao reinício do servidor.
+
+## Regras de negócio preservadas
+
+- Reserva com no mínimo 3 horas de antecedência.
+- Um morador não pode ter mais de uma reserva ativa no mesmo dia.
+- Reservas ativas não podem se sobrepor no mesmo espaço.
+- Toda nova reserva começa como `PENDENTE`.
+- Cancelamentos solicitados pelo morador dependem da decisão do zelador.
+
+## API principal
+
+- `POST /usuarios`
+- `POST /autenticacao/entrar`
+- `GET /usuarios/me`
+- `GET /usuarios`
+- `GET /espacos`
+- `POST /espacos`
+- `GET /espacos/:espacoId`
+- `PATCH /espacos/:espacoId`
+- `DELETE /espacos/:espacoId`
+- `POST /espacos/:espacoId/reservas`
+- `GET /espacos/:espacoId/reservas`
+- `GET /espacos/:espacoId/disponibilidade`
+- `GET /reservas/minhas`
+- `GET /reservas/pendentes`
+- `GET /reservas/cancelamentos-pendentes`
+- `PATCH /reservas/:reservaId/aprovacao`
+- `PATCH /reservas/:reservaId/recusa`
+- `POST /reservas/:reservaId/cancelamento`
+- `PATCH /reservas/:reservaId/cancelamento/aprovacao`
+- `PATCH /reservas/:reservaId/cancelamento/recusa`
