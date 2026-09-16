@@ -1,0 +1,54 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id                 String    @id
+  nome               String
+  email              String    @unique
+  senhaCriptografada String
+  papel              String
+  criadoEm           DateTime  @default(now())
+
+  reservas Reserva[]
+
+  @@map("usuarios")
+}
+
+model Espaco {
+  id        String   @id
+  nome      String
+  descricao String
+  capacidade Int
+  regras    String
+  criadoEm  DateTime @default(now())
+
+  reservas Reserva[]
+
+  @@map("espacos")
+}
+
+model Reserva {
+  id             String   @id
+  usuarioId      String
+  espacoId       String
+  data           String
+  horaInicio     String
+  horaFim        String
+  status         String
+  estadoAnterior String?
+  criadaEm       DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  espaco  Espaco  @relation(fields: [espacoId], references: [id], onDelete: Cascade)
+
+  @@index([espacoId, data])
+  @@index([usuarioId, data])
+  @@index([status])
+  @@map("reservas")
+}
