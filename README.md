@@ -10,7 +10,7 @@
 
 ## Overview
 
-O **CondoReservas** e uma aplicacao para organizar o uso de areas comuns em condominios residenciais. A proposta e permitir que moradores consultem espacos, verifiquem horarios e solicitem reservas, enquanto o zelador acompanha e administra as decisoes do condominio.
+O **CondoReservas** é uma aplicacao para organizar o uso de areas comuns em condominios residenciais. A proposta e permitir que moradores consultem espacos, verifiquem horarios e solicitem reservas, enquanto o zelador acompanha e administra as decisoes do condominio.
 
 Neste momento, o projeto possui o **backend funcional**, com as regras de negocio, autenticacao, controle de acesso e endpoints da API implementados. A proxima etapa e introduzir o frontend para transformar esses fluxos em uma experiencia completa de uso no navegador.
 
