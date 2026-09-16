@@ -158,6 +158,13 @@ export class AgendaReservas {
     return this.paginar(await this.dependencias.reservas.listarPorUsuario(usuarioId), filtros);
   }
 
+  async listarCancelamentosPendentes(zeladorId: string): Promise<Reserva[]> {
+    await this.dependencias.autorizacao.exigirZelador(zeladorId);
+    return (await this.dependencias.reservas.listarTodos()).filter(
+      (reserva) => reserva.status === "CANCELAMENTO_SOLICITADO"
+    );
+  }
+
   async listarPendentes(zeladorId: string): Promise<Reserva[]> {
     await this.dependencias.autorizacao.exigirZelador(zeladorId);
     return (await this.dependencias.reservas.listarTodos()).filter((reserva) => reserva.status === "PENDENTE");
